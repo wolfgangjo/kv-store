@@ -47,6 +47,25 @@ def main():
                 continue
             print("1" if store.exists(parts[1]) else "0")
 
+        elif cmd == "MSET":
+            if len(parts) < 3 or (len(parts) - 1) % 2 != 0:
+                print("ERROR: MSET requires key value pairs")
+                continue
+            pairs = parts[1:]
+            for i in range(0, len(pairs), 2):
+                store.set(pairs[i], pairs[i + 1])
+            print("OK")
+
+        elif cmd == "MGET":
+            if len(parts) < 2:
+                print("ERROR: MGET requires at least one key")
+                continue
+            results = []
+            for key in parts[1:]:
+                val = store.get(key)
+                results.append(val if val is not None else "NULL")
+            print(" ".join(results))
+
         elif cmd == "FLUSHDB":
             store.flushdb()
             print("OK")

@@ -1,2 +1,6 @@
 SET	foo	bar
 DEL	foo
+DEL	foo
+SET	a	1
+SET	b	2
+SET	c	3
