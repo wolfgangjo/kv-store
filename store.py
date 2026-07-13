@@ -4,11 +4,13 @@
 # On startup, the log is replayed to rebuild the in-memory index.
 # Supports transactions: BEGIN buffers writes, COMMIT flushes them to disk,
 # ABORT reverts the in-memory index using an undo list.
+# Hashes are stored as composite keys: "<hashname>\x1f<field>" -> value
 
 import time
 from index import Index
 
 DB_FILE = "data.db"
+HASH_SEP = "\x1f"
 
 class Store:
     def __init__(self):
@@ -16,8 +18,8 @@ class Store:
         self.ttl_index = Index()
 
         self.in_transaction = False
-        self.tx_log = []    # buffered log lines to write on COMMIT
-        self.tx_undo = []   # list of (key, old_value_or_None) to revert on ABORT
+        self.tx_log = []
+        self.tx_undo = []
 
         self._load()
 
@@ -34,14 +36,12 @@ class Store:
             f.write(line + "\n")
 
     def _append(self, line):
-        # if inside a transaction, buffer instead of writing immediately
         if self.in_transaction:
             self.tx_log.append(line)
         else:
             self._write_line(line)
 
     def _record_undo(self, key):
-        # save the current value of key so we can revert it on ABORT
         if self.in_transaction:
             self.tx_undo.append((key, self.index.get(key)))
 
@@ -59,6 +59,9 @@ class Store:
             self.ttl_index.flush()
         elif op == "EXPIRE":
             self.ttl_index.set(parts[1], parts[2])
+        elif op == "HSET":
+            composite = parts[1] + HASH_SEP + parts[2]
+            self.index.set(composite, parts[3])
 
     def _check_expired(self, key):
         expire_at = self.ttl_index.get(key)
@@ -92,7 +95,6 @@ class Store:
         return self.index.range(start, end)
 
     def flushdb(self):
-        # record undo for every existing key before wiping
         if self.in_transaction:
             for k, v in self.index.entries:
                 self.tx_undo.append((k, v))
@@ -138,7 +140,6 @@ class Store:
     def abort(self):
         if not self.in_transaction:
             return False
-        # revert in reverse order in case the same key changed multiple times
         for key, old_value in reversed(self.tx_undo):
             if old_value is None:
                 self.index.delete(key)
@@ -148,3 +149,22 @@ class Store:
         self.tx_log = []
         self.tx_undo = []
         return True
+
+    def hset(self, hashname, field, value):
+        composite = hashname + HASH_SEP + field
+        self._record_undo(composite)
+        self._append(f"HSET\t{hashname}\t{field}\t{value}")
+        self.index.set(composite, value)
+
+    def hget(self, hashname, field):
+        composite = hashname + HASH_SEP + field
+        return self.index.get(composite)
+
+    def hgetall(self, hashname):
+        prefix = hashname + HASH_SEP
+        result = []
+        for k, v in self.index.entries:
+            if k.startswith(prefix):
+                field = k[len(prefix):]
+                result.append((field, v))
+        return result

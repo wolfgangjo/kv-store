@@ -103,6 +103,31 @@ def main():
         elif cmd == "ABORT":
             print("OK" if store.abort() else "ERROR: no transaction in progress")
 
+        elif cmd == "HSET":
+            if len(parts) < 4:
+                print("ERROR: HSET requires hash, field, and value")
+                continue
+            store.hset(parts[1], parts[2], " ".join(parts[3:]))
+            print("OK")
+
+        elif cmd == "HGET":
+            if len(parts) < 3:
+                print("ERROR: HGET requires hash and field")
+                continue
+            result = store.hget(parts[1], parts[2])
+            print(result if result is not None else "NULL")
+
+        elif cmd == "HGETALL":
+            if len(parts) < 2:
+                print("ERROR: HGETALL requires a hash name")
+                continue
+            results = store.hgetall(parts[1])
+            if not results:
+                print("EMPTY")
+            else:
+                for field, val in results:
+                    print(f"{field} {val}")
+
         elif cmd == "FLUSHDB":
             store.flushdb()
             print("OK")

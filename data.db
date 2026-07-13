@@ -18,3 +18,5 @@ SET	cherry	3
 SET	date	4
 SET	foo	bar
 SET	foo	qux
+HSET	user1	name	Jordan
+HSET	user1	age	24
