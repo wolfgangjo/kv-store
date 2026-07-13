@@ -66,6 +66,23 @@ def main():
                 results.append(val if val is not None else "NULL")
             print(" ".join(results))
 
+        elif cmd == "EXPIRE":
+            if len(parts) < 3:
+                print("ERROR: EXPIRE requires a key and seconds")
+                continue
+            try:
+                seconds = int(parts[2])
+            except ValueError:
+                print("ERROR: seconds must be an integer")
+                continue
+            print("1" if store.expire(parts[1], seconds) else "0")
+
+        elif cmd == "TTL":
+            if len(parts) < 2:
+                print("ERROR: TTL requires a key")
+                continue
+            print(store.ttl(parts[1]))
+
         elif cmd == "FLUSHDB":
             store.flushdb()
             print("OK")
