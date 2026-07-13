@@ -4,6 +4,7 @@
 import sys
 from store import Store
 
+
 def main():
     store = Store()
 
@@ -179,6 +180,7 @@ def main():
 
         else:
             print(f"ERROR: unknown command {cmd}")
+
 
 if __name__ == "__main__":
     main()

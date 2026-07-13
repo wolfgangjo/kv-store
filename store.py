@@ -15,6 +15,7 @@ DB_FILE = "data.db"
 HASH_SEP = "\x1f"
 LIST_PAD = 10
 
+
 class Store:
     def __init__(self):
         self.index = Index()
