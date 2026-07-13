@@ -83,6 +83,17 @@ def main():
                 continue
             print(store.ttl(parts[1]))
 
+        elif cmd == "RANGE":
+            if len(parts) < 3:
+                print("ERROR: RANGE requires a start and end key")
+                continue
+            results = store.range(parts[1], parts[2])
+            if not results:
+                print("EMPTY")
+            else:
+                for k, v in results:
+                    print(f"{k} {v}")
+
         elif cmd == "FLUSHDB":
             store.flushdb()
             print("OK")

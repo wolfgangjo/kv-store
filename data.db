@@ -8,3 +8,11 @@ SET	foo	bar
 EXPIRE	foo	1783900811.522299
 SET	foo	bar
 EXPIRE	foo	1783901369.1378005
+SET	apple	1
+SET	banana	2
+SET	cherry	3
+SET	date	4
+SET	apple	1
+SET	banana	2
+SET	cherry	3
+SET	date	4
