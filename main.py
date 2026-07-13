@@ -159,6 +159,20 @@ def main():
                 for v in values:
                     print(v)
 
+        elif cmd == "INCR":
+            if len(parts) < 2:
+                print("ERROR: INCR requires a key")
+                continue
+            result = store.incr(parts[1])
+            print(result if result is not None else "ERROR: value is not an integer")
+
+        elif cmd == "DECR":
+            if len(parts) < 2:
+                print("ERROR: DECR requires a key")
+                continue
+            result = store.decr(parts[1])
+            print(result if result is not None else "ERROR: value is not an integer")
+
         elif cmd == "FLUSHDB":
             store.flushdb()
             print("OK")

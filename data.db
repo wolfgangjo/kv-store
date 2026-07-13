@@ -25,3 +25,7 @@ RPUSH	mylist	b
 RPUSH	mylist	c
 RPUSH	mylist	z
 LPUSH	mylist	z
+SET	counter	10
+SET	counter	11
+SET	counter	12
+SET	counter	11

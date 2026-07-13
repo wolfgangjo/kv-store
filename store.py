@@ -6,14 +6,14 @@
 # ABORT reverts the in-memory index using an undo list.
 # Hashes are stored as composite keys: "<hashname>\x1f<field>" -> value
 # Lists are stored as composite keys: "<listname>\x1f<zero_padded_index>" -> value
-# plus a length marker key: "<listname>\x1f__len__" -> count
+# Counters (INCR/DECR) reuse the normal SET path on integer-parsed values.
 
 import time
 from index import Index
 
 DB_FILE = "data.db"
 HASH_SEP = "\x1f"
-LIST_PAD = 10  # zero-pad width for list indices, so sort order = numeric order
+LIST_PAD = 10
 
 class Store:
     def __init__(self):
@@ -176,10 +176,6 @@ class Store:
                 result.append((field, v))
         return result
 
-    # ---- Lists ----
-    # Each list item is stored as key "<listname>\x1f<zero-padded-index>"
-    # Zero-padding keeps lexicographic order == numeric order.
-
     def _list_items(self, listname):
         prefix = listname + HASH_SEP
         items = []
@@ -192,7 +188,6 @@ class Store:
 
     def _do_lpush(self, listname, value):
         items = self._list_items(listname)
-        # shift every existing index up by 1, then insert new item at index 0
         for idx, v in reversed(items):
             old_key = listname + HASH_SEP + str(idx).zfill(LIST_PAD)
             new_key = listname + HASH_SEP + str(idx + 1).zfill(LIST_PAD)
@@ -220,7 +215,6 @@ class Store:
         values = [v for _, v in items]
         n = len(values)
 
-        # support negative indices like Redis (-1 = last element)
         if start < 0:
             start = max(n + start, 0)
         if stop < 0:
@@ -230,3 +224,23 @@ class Store:
         if start > stop or n == 0:
             return []
         return values[start:stop + 1]
+
+    def incr(self, key):
+        current = self.index.get(key)
+        try:
+            num = int(current) if current is not None else 0
+        except ValueError:
+            return None
+        num += 1
+        self.set(key, str(num))
+        return num
+
+    def decr(self, key):
+        current = self.index.get(key)
+        try:
+            num = int(current) if current is not None else 0
+        except ValueError:
+            return None
+        num -= 1
+        self.set(key, str(num))
+        return num
