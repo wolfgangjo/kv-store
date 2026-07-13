@@ -20,3 +20,8 @@ SET	foo	bar
 SET	foo	qux
 HSET	user1	name	Jordan
 HSET	user1	age	24
+RPUSH	mylist	a
+RPUSH	mylist	b
+RPUSH	mylist	c
+RPUSH	mylist	z
+LPUSH	mylist	z

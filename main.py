@@ -128,6 +128,37 @@ def main():
                 for field, val in results:
                     print(f"{field} {val}")
 
+        elif cmd == "LPUSH":
+            if len(parts) < 3:
+                print("ERROR: LPUSH requires a key and value")
+                continue
+            store.lpush(parts[1], " ".join(parts[2:]))
+            print("OK")
+
+        elif cmd == "RPUSH":
+            if len(parts) < 3:
+                print("ERROR: RPUSH requires a key and value")
+                continue
+            store.rpush(parts[1], " ".join(parts[2:]))
+            print("OK")
+
+        elif cmd == "LRANGE":
+            if len(parts) < 4:
+                print("ERROR: LRANGE requires a key, start, and stop")
+                continue
+            try:
+                start = int(parts[2])
+                stop = int(parts[3])
+            except ValueError:
+                print("ERROR: start and stop must be integers")
+                continue
+            values = store.lrange(parts[1], start, stop)
+            if not values:
+                print("EMPTY")
+            else:
+                for v in values:
+                    print(v)
+
         elif cmd == "FLUSHDB":
             store.flushdb()
             print("OK")

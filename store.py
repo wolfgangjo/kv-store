@@ -5,12 +5,15 @@
 # Supports transactions: BEGIN buffers writes, COMMIT flushes them to disk,
 # ABORT reverts the in-memory index using an undo list.
 # Hashes are stored as composite keys: "<hashname>\x1f<field>" -> value
+# Lists are stored as composite keys: "<listname>\x1f<zero_padded_index>" -> value
+# plus a length marker key: "<listname>\x1f__len__" -> count
 
 import time
 from index import Index
 
 DB_FILE = "data.db"
 HASH_SEP = "\x1f"
+LIST_PAD = 10  # zero-pad width for list indices, so sort order = numeric order
 
 class Store:
     def __init__(self):
@@ -62,6 +65,10 @@ class Store:
         elif op == "HSET":
             composite = parts[1] + HASH_SEP + parts[2]
             self.index.set(composite, parts[3])
+        elif op == "LPUSH":
+            self._do_lpush(parts[1], parts[2])
+        elif op == "RPUSH":
+            self._do_rpush(parts[1], parts[2])
 
     def _check_expired(self, key):
         expire_at = self.ttl_index.get(key)
@@ -168,3 +175,58 @@ class Store:
                 field = k[len(prefix):]
                 result.append((field, v))
         return result
+
+    # ---- Lists ----
+    # Each list item is stored as key "<listname>\x1f<zero-padded-index>"
+    # Zero-padding keeps lexicographic order == numeric order.
+
+    def _list_items(self, listname):
+        prefix = listname + HASH_SEP
+        items = []
+        for k, v in self.index.entries:
+            if k.startswith(prefix):
+                idx_str = k[len(prefix):]
+                items.append((int(idx_str), v))
+        items.sort(key=lambda pair: pair[0])
+        return items
+
+    def _do_lpush(self, listname, value):
+        items = self._list_items(listname)
+        # shift every existing index up by 1, then insert new item at index 0
+        for idx, v in reversed(items):
+            old_key = listname + HASH_SEP + str(idx).zfill(LIST_PAD)
+            new_key = listname + HASH_SEP + str(idx + 1).zfill(LIST_PAD)
+            self.index.delete(old_key)
+            self.index.set(new_key, v)
+        new_key = listname + HASH_SEP + "0".zfill(LIST_PAD)
+        self.index.set(new_key, value)
+
+    def _do_rpush(self, listname, value):
+        items = self._list_items(listname)
+        next_idx = (items[-1][0] + 1) if items else 0
+        new_key = listname + HASH_SEP + str(next_idx).zfill(LIST_PAD)
+        self.index.set(new_key, value)
+
+    def lpush(self, listname, value):
+        self._append(f"LPUSH\t{listname}\t{value}")
+        self._do_lpush(listname, value)
+
+    def rpush(self, listname, value):
+        self._append(f"RPUSH\t{listname}\t{value}")
+        self._do_rpush(listname, value)
+
+    def lrange(self, listname, start, stop):
+        items = self._list_items(listname)
+        values = [v for _, v in items]
+        n = len(values)
+
+        # support negative indices like Redis (-1 = last element)
+        if start < 0:
+            start = max(n + start, 0)
+        if stop < 0:
+            stop = n + stop
+        stop = min(stop, n - 1)
+
+        if start > stop or n == 0:
+            return []
+        return values[start:stop + 1]
