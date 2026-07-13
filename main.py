@@ -94,6 +94,15 @@ def main():
                 for k, v in results:
                     print(f"{k} {v}")
 
+        elif cmd == "BEGIN":
+            print("OK" if store.begin() else "ERROR: already in a transaction")
+
+        elif cmd == "COMMIT":
+            print("OK" if store.commit() else "ERROR: no transaction in progress")
+
+        elif cmd == "ABORT":
+            print("OK" if store.abort() else "ERROR: no transaction in progress")
+
         elif cmd == "FLUSHDB":
             store.flushdb()
             print("OK")

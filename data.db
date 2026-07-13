@@ -16,3 +16,5 @@ SET	apple	1
 SET	banana	2
 SET	cherry	3
 SET	date	4
+SET	foo	bar
+SET	foo	qux
